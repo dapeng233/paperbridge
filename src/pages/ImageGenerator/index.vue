@@ -1,6 +1,6 @@
 <template>
   <div class="image-generator">
-    <h2 class="page-title">AI 作图</h2>
+    <h2 class="page-title">AI 生图 <router-link to="/canvas" class="edit-link">图片编辑</router-link></h2>
     <div class="generator-layout">
       <!-- 左侧：输入面板 -->
       <div class="panel input-panel">
@@ -10,41 +10,11 @@
         <div class="form-group">
           <label>使用方式</label>
           <div class="mode-switch">
-            <button
-              class="mode-btn"
-              :class="{ active: billingMode === 'google' }"
-              @click="switchMode('google')"
-            >Google API</button>
-            <button
-              class="mode-btn"
-              :class="{ active: billingMode === 'dmxapi' }"
-              @click="switchMode('dmxapi')"
-            >DMX API</button>
-            <button
-              class="mode-btn"
-              :class="{ active: billingMode === 'wallet' }"
-              @click="switchMode('wallet')"
-            >余额</button>
+            <button class="mode-btn" :class="{ active: billingMode === 'google' }" @click="switchMode('google')">Google AI</button>
+            <button class="mode-btn" :class="{ active: billingMode === 'dmxapi' }" @click="switchMode('dmxapi')">DMX API</button>
+            <button class="mode-btn" :class="{ active: billingMode === 'wallet' }" @click="switchMode('wallet')">余额</button>
           </div>
-        </div>
-
-        <!-- Google API 模式 -->
-        <div v-if="billingMode === 'google'" class="form-group">
-          <label>Google API Key *</label>
-          <input v-model="googleApiKey" type="password" placeholder="输入你的 Google AI Studio API Key" class="input-field" />
-          <small>从 <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> 获取，免费使用</small>
-        </div>
-        <div v-if="billingMode === 'google'" class="form-group">
-          <label>代理地址（国内必填）</label>
-          <input v-model="googleProxy" type="text" placeholder="http://127.0.0.1:7890" class="input-field" />
-          <small>填写本地代理地址，如 Clash 默认 7890、V2Ray 默认 10809</small>
-        </div>
-
-        <!-- DMX API 密钥模式 -->
-        <div v-if="billingMode === 'dmxapi'" class="form-group">
-          <label>DMX API 密钥 *</label>
-          <input v-model="dmxapiKey" type="password" placeholder="输入你的 DMX API 密钥" class="input-field" />
-          <small>从 <a href="https://www.dmxapi.cn" target="_blank">dmxapi.cn</a> 获取</small>
+          <small v-if="billingMode !== 'wallet'">API 密钥请在 <router-link to="/api-config">API 配置</router-link> 中设置</small>
         </div>
 
         <!-- 余额模式信息 -->
@@ -54,11 +24,6 @@
             <span class="wallet-price">每张约 ￥0.3~0.5</span>
             <router-link to="/wallet" class="wallet-link">充值</router-link>
           </div>
-        </div>
-
-        <!-- 充值提示 -->
-        <div v-if="billingMode !== 'wallet'" class="form-group">
-          <div class="tip-inline">如果不方便申请 API 或短期使用，可切换到「余额」模式，<router-link to="/wallet">前往充值</router-link>。</div>
         </div>
 
         <!-- 模型选择 -->
@@ -224,6 +189,7 @@ const imagePreview = ref('');
 const selectedFile = ref(null);
 
 onMounted(() => {
+  loadApiConfig();
   loadModels();
   loadWalletBalance();
   if (route.query.from === 'canvas') {
@@ -246,6 +212,19 @@ async function loadWalletBalance() {
   } catch (e) {
     console.error('加载余额失败:', e);
   }
+}
+
+async function loadApiConfig() {
+  try {
+    const [gk, gp, dk] = await Promise.all([
+      api.get('/api/literature/settings/google_api_key'),
+      api.get('/api/literature/settings/google_proxy'),
+      api.get('/api/literature/settings/dmx_api_key')
+    ]);
+    googleApiKey.value = gk.value || '';
+    googleProxy.value = gp.value || '';
+    dmxapiKey.value = dk.value || '';
+  } catch {}
 }
 
 async function loadModels() {
@@ -308,8 +287,8 @@ function compressImage(file, maxWidth = 1024, quality = 0.8) {
 }
 
 async function handleGenerate() {
-  if (billingMode.value === 'dmxapi' && !dmxapiKey.value.trim()) { errorMsg.value = '请输入 DMX API 密钥'; return; }
-  if (billingMode.value === 'google' && !googleApiKey.value.trim()) { errorMsg.value = '请输入 Google API Key'; return; }
+  if (billingMode.value === 'dmxapi' && !dmxapiKey.value.trim()) { errorMsg.value = '请先在「API 配置」中设置 DMX API 密钥'; return; }
+  if (billingMode.value === 'google' && !googleApiKey.value.trim()) { errorMsg.value = '请先在「API 配置」中设置 Google API Key'; return; }
   if (billingMode.value === 'wallet' && walletBalance.value < 0.35) { errorMsg.value = '余额不足，请先充值'; return; }
   if (!selectedModel.value) { errorMsg.value = '请选择模型'; return; }
 
@@ -422,7 +401,20 @@ function formatTime(ts) {
   color: var(--text-primary);
   margin-bottom: 16px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
+.edit-link {
+  font-size: 0.55em;
+  padding: 4px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 400;
+}
+.edit-link:hover { background: var(--bg-card-hover); color: var(--text-primary); }
 
 .generator-layout {
   display: grid;

@@ -13,8 +13,8 @@ const TRANSLATION_MODELS = [
 ];
 
 // 用单个模型尝试翻译
-async function tryTranslate(prompt, apiKey, model) {
-  const url = `${config.dmxapiBaseUrl}/v1/chat/completions`;
+async function tryTranslate(prompt, apiKey, model, baseUrl) {
+  const url = `${baseUrl || config.dmxapiBaseUrl}/v1/chat/completions`;
   const response = await axios.post(url, {
     model,
     messages: [
@@ -32,15 +32,21 @@ async function tryTranslate(prompt, apiKey, model) {
 
 // 翻译中文 prompt 为英文（带 fallback）
 // useOwnerKey: true 时使用站长 key（Google API 模式下用户没有 dmxapi key）
-async function translateToEnglish(prompt, apiKey, useOwnerKey = false) {
-  const translationKey = useOwnerKey ? config.ownerApiKey : apiKey;
+async function translateToEnglish(prompt, apiKey, useOwnerKeyOrBaseUrl = false) {
+  let translationKey = apiKey;
+  let baseUrl = null;
+  if (typeof useOwnerKeyOrBaseUrl === 'string' && useOwnerKeyOrBaseUrl.startsWith('http')) {
+    baseUrl = useOwnerKeyOrBaseUrl;
+  } else if (useOwnerKeyOrBaseUrl === true) {
+    translationKey = config.ownerApiKey;
+  }
   if (!translationKey) {
     console.error('无可用翻译 key，使用原始 prompt');
     return prompt;
   }
   for (const model of TRANSLATION_MODELS) {
     try {
-      const result = await tryTranslate(prompt, translationKey, model);
+      const result = await tryTranslate(prompt, translationKey, model, baseUrl);
       if (result) {
         console.log(`翻译(${model}): "${prompt}" → "${result}"`);
         return result;

@@ -1,9 +1,9 @@
 <template>
-  <!-- 登录遮罩 -->
-  <LoginOverlay v-if="!authStore.authenticated" @login-success="onLoginSuccess" />
+  <!-- 登录遮罩（仅在需要登录功能时显示） -->
+  <LoginOverlay v-if="showLogin" @login-success="onLoginSuccess" />
 
   <!-- 主应用 -->
-  <div v-else class="app-layout">
+  <div class="app-layout">
     <aside class="sidebar">
       <div class="sidebar-header">
         <h1 class="app-title">SciTools</h1>
@@ -52,6 +52,7 @@ import { useAuthStore } from '@/stores/auth';
 import LoginOverlay from '@/components/LoginOverlay.vue';
 
 const authStore = useAuthStore();
+const showLogin = ref(false);
 
 const isDark = ref(false);
 const currentVersion = '1.0.0';
@@ -61,11 +62,10 @@ const latestVersion = ref('');
 const updateUrl = ref('');
 
 const navItems = ref([
-  { path: '/image-generator', label: 'AI 作图', disabled: false },
-  { path: '/canvas', label: '图片编辑', disabled: false },
-  { path: '/wallet', label: '我的钱包', disabled: false },
-  { path: '/sci-chart', label: '科研绘图', disabled: true },
-  { path: '/literature', label: '文献助手', disabled: true }
+  { path: '/literature', label: '文献助手', disabled: false },
+  { path: '/image-generator', label: 'AI 生图', disabled: false },
+  { path: '/api-config', label: 'API 配置', disabled: false },
+  { path: '/wallet', label: '账户余额', disabled: false }
 ]);
 
 onMounted(async () => {

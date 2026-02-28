@@ -38,6 +38,9 @@ app.use(express.static(path.join(__dirname, '../dist')));
 storage.ensureDir(config.imagesDir);
 app.use('/images', express.static(config.imagesDir));
 
+// Word Add-in 静态文件
+app.use('/addin', express.static(path.join(__dirname, '../word-addin')));
+
 // 认证路由（不需要鉴权）
 app.use('/api/auth', authLimiter, authRouter);
 
@@ -62,6 +65,10 @@ app.use('/api/admin', (req, res, next) => {
   next();
 }, adminRouter);
 
+// 文献管理路由（本地功能，不需要鉴权）
+const literatureRouter = require('./routes/literature');
+app.use('/api/literature', literatureRouter);
+
 // 需要鉴权的 API 路由
 app.use('/api', authMiddleware);
 app.use('/api', imageRouter);
@@ -77,7 +84,22 @@ app.get('*', (req, res) => {
 app.listen(config.port, () => {
   console.log(`\n✨ SciTools 后端已启动`);
   console.log(`📱 http://localhost:${config.port}`);
-  console.log(`\n按 Ctrl+C 停止服务\n`);
 });
+
+// HTTPS for Word Add-in
+const fs = require('fs');
+const https = require('https');
+const certDir = path.join(__dirname, '../certs');
+if (fs.existsSync(path.join(certDir, 'localhost.pem'))) {
+  const httpsServer = https.createServer({
+    key: fs.readFileSync(path.join(certDir, 'localhost-key.pem')),
+    cert: fs.readFileSync(path.join(certDir, 'localhost.pem'))
+  }, app);
+  httpsServer.listen(3443, () => {
+    console.log(`🔒 https://localhost:3443 (Word Add-in)`);
+  });
+}
+
+console.log(`\n按 Ctrl+C 停止服务\n`);
 
 module.exports = app;

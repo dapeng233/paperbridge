@@ -99,6 +99,109 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_recharge_codes_code ON recharge_codes(code);
+
+  -- 文献管理：文件夹
+  CREATE TABLE IF NOT EXISTS folders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    parent_id INTEGER DEFAULT NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE
+  );
+
+  -- 文献管理：题录
+  CREATE TABLE IF NOT EXISTS refs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    folder_id INTEGER,
+    title TEXT DEFAULT '',
+    authors TEXT DEFAULT '[]',
+    journal TEXT DEFAULT '',
+    year INTEGER,
+    volume TEXT DEFAULT '',
+    issue TEXT DEFAULT '',
+    pages TEXT DEFAULT '',
+    doi TEXT DEFAULT '',
+    abstract TEXT DEFAULT '',
+    keywords TEXT DEFAULT '[]',
+    ref_type TEXT DEFAULT 'journal',
+    pdf_filename TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_refs_folder ON refs(folder_id);
+  CREATE INDEX IF NOT EXISTS idx_refs_doi ON refs(doi);
+
+  -- 文献管理：笔记
+  CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ref_id INTEGER NOT NULL,
+    content TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (ref_id) REFERENCES refs(id) ON DELETE CASCADE
+  );
+
+  -- 设置
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
+  -- 引用样式
+  CREATE TABLE IF NOT EXISTS citation_styles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    is_preset INTEGER DEFAULT 0,
+    inline_template TEXT DEFAULT '',
+    bibliography_template TEXT DEFAULT '',
+    sort_by TEXT DEFAULT 'author',
+    config TEXT DEFAULT '{}',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- Word Add-in 插入队列
+  CREATE TABLE IF NOT EXISTS insert_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ref_ids TEXT NOT NULL,
+    style_id INTEGER NOT NULL,
+    type TEXT DEFAULT 'inline',
+    status TEXT DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 module.exports = db;
+
+// 插入预设样式（仅首次）
+const presetCount = db.prepare('SELECT COUNT(*) as c FROM citation_styles WHERE is_preset = 1').get();
+if (presetCount.c === 0) {
+  const insert = db.prepare('INSERT INTO citation_styles (name, is_preset, inline_template, bibliography_template, sort_by, config) VALUES (?, 1, ?, ?, ?, ?)');
+  insert.run('APA 7th',
+    '({authors_short}, {year})',
+    '{authors} ({year}). {title}. {journal}, {volume}({issue}), {pages}. https://doi.org/{doi}',
+    'author',
+    JSON.stringify({ authors_sep: ', ', authors_short_max: 2, et_al: 'et al.', year_parens: true })
+  );
+  insert.run('GB/T 7714-2015',
+    '[{index}]',
+    '[{index}] {authors}. {title}[J]. {journal}, {year}, {volume}({issue}): {pages}.',
+    'order',
+    JSON.stringify({ authors_sep: ', ', index_based: true })
+  );
+  insert.run('Vancouver',
+    '({index})',
+    '{index}. {authors}. {title}. {journal}. {year};{volume}({issue}):{pages}.',
+    'order',
+    JSON.stringify({ authors_sep: ', ', index_based: true })
+  );
+  insert.run('Harvard',
+    '({authors_short} {year})',
+    "{authors} {year}, '{title}', {journal}, vol. {volume}, no. {issue}, pp. {pages}.",
+    'author',
+    JSON.stringify({ authors_sep: ' & ', authors_short_max: 3, et_al: 'et al.' })
+  );
+}

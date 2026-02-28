@@ -3,17 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 const routes = [
   {
     path: '/',
-    redirect: '/image-generator'
-  },
-  {
-    path: '/image-generator',
-    name: 'ImageGenerator',
-    component: () => import('@/pages/ImageGenerator/index.vue')
-  },
-  {
-    path: '/sci-chart',
-    name: 'SciChart',
-    component: () => import('@/pages/SciChart/index.vue')
+    redirect: '/literature'
   },
   {
     path: '/literature',
@@ -21,9 +11,19 @@ const routes = [
     component: () => import('@/pages/Literature/index.vue')
   },
   {
-    path: '/help',
-    name: 'Help',
-    component: () => import('@/pages/Help.vue')
+    path: '/image-generator',
+    name: 'ImageGenerator',
+    component: () => import('@/pages/ImageGenerator/index.vue')
+  },
+  {
+    path: '/canvas',
+    name: 'Canvas',
+    component: () => import('@/pages/Canvas.vue')
+  },
+  {
+    path: '/api-config',
+    name: 'ApiConfig',
+    component: () => import('@/pages/ApiConfig.vue')
   },
   {
     path: '/wallet',
@@ -31,9 +31,9 @@ const routes = [
     component: () => import('@/pages/Wallet.vue')
   },
   {
-    path: '/canvas',
-    name: 'Canvas',
-    component: () => import('@/pages/Canvas.vue')
+    path: '/help',
+    name: 'Help',
+    component: () => import('@/pages/Help.vue')
   },
   {
     path: '/admin',
