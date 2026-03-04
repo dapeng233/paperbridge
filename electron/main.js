@@ -9,9 +9,11 @@ let mainWindow = null;
 
 // 生产模式下用子进程启动后端（避免原生模块兼容问题）
 if (!isDev) {
+  const appPath = path.dirname(app.getPath('exe'));
   const serverPath = path.join(__dirname, '../server/index.js');
   serverProcess = spawn('node', [serverPath], {
     stdio: 'inherit',
+    cwd: appPath,  // 设置工作目录为应用安装目录
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
   });
 }

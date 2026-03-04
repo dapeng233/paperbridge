@@ -1,6 +1,12 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
+// 检测是否在 Electron 打包环境中
+const isPackaged = process.env.ELECTRON_RUN_AS_NODE === '1' || process.defaultApp === false;
+const dataDir = isPackaged
+  ? path.join(process.cwd(), 'data')  // 打包后使用应用目录下的 data
+  : path.join(__dirname, '../../data'); // 开发环境使用相对路径
+
 module.exports = {
   port: process.env.PORT || 3001,
   accessPassword: process.env.ACCESS_PASSWORD || '',
@@ -8,8 +14,8 @@ module.exports = {
   dmxapiBaseUrl: process.env.DMXAPI_BASE_URL || 'https://www.dmxapi.cn',
   ownerApiKey: process.env.OWNER_API_KEY || '',
   adminKey: process.env.ADMIN_KEY || '',
-  dataDir: path.join(__dirname, '../../data'),
-  imagesDir: path.join(__dirname, '../../data/images'),
+  dataDir: dataDir,
+  imagesDir: path.join(dataDir, 'images'),
   maxHistoryRecords: 100,
   upload: {
     maxFileSize: 50 * 1024 * 1024 // 50MB
