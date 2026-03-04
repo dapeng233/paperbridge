@@ -4,59 +4,42 @@
       <div class="setup-wizard">
         <div class="wizard-header">
           <h2>欢迎使用 PaperBridge</h2>
-          <p>首次使用需要配置 Word 插件才能在 Word 中插入引用</p>
+          <p>首次使用需要配置 API 和文献库</p>
         </div>
 
         <div class="wizard-content">
-          <!-- Step 1: 生成证书 -->
-          <div class="wizard-step" :class="{ active: step === 1, done: certReady }">
+          <!-- Step 1: 配置 API -->
+          <div class="wizard-step" :class="{ active: step === 1 }">
             <div class="step-header">
               <div class="step-num">1</div>
-              <div class="step-title">
-                <span>生成 HTTPS 证书</span>
-                <span v-if="certReady" class="step-done-badge">已完成</span>
-              </div>
+              <div class="step-title">配置 API</div>
             </div>
             <div class="step-body" v-if="step === 1">
-              <p>Word 插件需要 HTTPS 证书才能运行。点击下方按钮生成证书，系统会弹出管理员权限确认框。</p>
+              <p>PaperBridge 需要 AI API 来提供智能功能。请前往左侧菜单的 <b>API 配置</b> 页面设置您的 API Key 和 Base URL。</p>
               <div class="step-actions">
-                <button @click="generateCert" :disabled="generating" class="btn-primary">
-                  {{ generating ? '生成中...' : '生成证书' }}
-                </button>
-                <button @click="checkCert" class="btn-secondary">检查状态</button>
+                <button @click="goToApiConfig" class="btn-primary">前往配置</button>
               </div>
-              <div v-if="certError" class="step-error">{{ certError }}</div>
-              <div v-if="certMessage" class="step-message">{{ certMessage }}</div>
             </div>
           </div>
 
-          <!-- Step 2: 添加到 Word -->
+          <!-- Step 2: 配置文献库 -->
           <div class="wizard-step" :class="{ active: step === 2 }">
             <div class="step-header">
               <div class="step-num">2</div>
-              <div class="step-title">在 Word 中添加插件</div>
+              <div class="step-title">配置文献库</div>
             </div>
             <div class="step-body" v-if="step === 2">
-              <p>按以下步骤在 Word 中添加 PaperBridge 引用助手：</p>
-              <ol class="step-list">
-                <li>打开 Word，点击 <b>文件</b> → <b>选项</b> → <b>信任中心</b></li>
-                <li>点击 <b>信任中心设置</b> → <b>受信任的加载项目录</b></li>
-                <li>在 <b>目录 URL</b> 中粘贴以下路径：
-                  <div class="path-box">
-                    <code>{{ addinPath }}</code>
-                    <button @click="copyPath" class="btn-copy">{{ copied ? '已复制' : '复制' }}</button>
-                  </div>
-                </li>
-                <li>勾选 <b>在菜单中显示</b>，点击 <b>添加目录</b>，然后 <b>确定</b></li>
-                <li><b>重启 Word</b>，在 <b>插入</b> → <b>我的加载项</b> → <b>共享文件夹</b> 中添加插件</li>
-              </ol>
+              <p>请选择一个文件夹作为您的文献库路径，用于存储题录和 PDF 文件。</p>
+              <div class="step-actions">
+                <button @click="goToLiterature" class="btn-primary">前往配置</button>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="wizard-footer">
-          <button v-if="step === 1 && !certReady" @click="skip" class="btn-skip">跳过，稍后配置</button>
-          <button v-if="step === 1 && certReady" @click="step = 2" class="btn-primary">下一步</button>
+          <button @click="skip" class="btn-skip">跳过，稍后配置</button>
+          <button v-if="step === 1" @click="step = 2" class="btn-primary">下一步</button>
           <button v-if="step === 2" @click="finish" class="btn-primary">完成</button>
         </div>
       </div>
@@ -65,16 +48,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 
 const visible = ref(false);
 const step = ref(1);
-const certReady = ref(false);
-const generating = ref(false);
-const certError = ref('');
-const certMessage = ref('');
-const addinPath = ref('');
-const copied = ref(false);
+const router = inject('$router');
 
 onMounted(async () => {
   // 检查是否首次启动
@@ -83,50 +61,17 @@ onMounted(async () => {
     if (isFirstLaunch) {
       visible.value = true;
     }
-    // 获取路径
-    const paths = await window.electronAPI.getAppPaths();
-    addinPath.value = paths.addinDir;
-    // 检查证书状态
-    await checkCert();
   }
 });
 
-async function checkCert() {
-  if (!window.electronAPI) return;
-  const status = await window.electronAPI.checkCertStatus();
-  certReady.value = status.exists;
-  if (status.exists) {
-    certMessage.value = '证书已就绪';
-    certError.value = '';
-  }
+function goToApiConfig() {
+  visible.value = false;
+  if (router) router.push('/api-config');
 }
 
-async function generateCert() {
-  if (!window.electronAPI) return;
-  generating.value = true;
-  certError.value = '';
-  certMessage.value = '';
-
-  try {
-    const result = await window.electronAPI.generateCertElevated();
-    if (result.success) {
-      certMessage.value = result.message || '请在弹出窗口中完成操作，然后点击"检查状态"';
-    } else {
-      certError.value = result.error || '生成失败';
-    }
-  } catch (err) {
-    certError.value = err.message;
-  } finally {
-    generating.value = false;
-  }
-}
-
-async function copyPath() {
-  if (window.electronAPI) {
-    await window.electronAPI.copyToClipboard(addinPath.value);
-    copied.value = true;
-    setTimeout(() => copied.value = false, 2000);
-  }
+function goToLiterature() {
+  visible.value = false;
+  if (router) router.push('/literature');
 }
 
 function skip() {

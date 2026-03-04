@@ -3,7 +3,7 @@
     <!-- 顶部工具栏 -->
     <div class="lit-toolbar">
       <input v-model="searchQuery" placeholder="搜索题录..." class="lit-search" @input="onSearch" />
-      <button class="lit-btn primary" @click="openEditor(null)">+ 新建题录</button>
+      <button class="lit-btn new-record-btn" @click="openEditor(null)">+ 新建题录</button>
       <button class="lit-btn" :class="{ active: isAllSelected }" @click="toggleSelectAll">{{ isAllSelected ? '取消全选' : '全选' }}</button>
       <button class="lit-btn danger" v-if="selectedIds.size > 0" @click="deleteSelected">{{ selectedFolder === '__trash__' ? '永久删除' : '删除选中' }} ({{ selectedIds.size }})</button>
       <div v-if="selectedIds.size > 0" class="move-to-dropdown">
@@ -17,7 +17,7 @@
       </div>
       <div style="flex:1"></div>
       <button class="lit-btn" @click="showImport = true">导入</button>
-      <button class="lit-btn" style="background:#2e7d32;color:#fff" @click="importFromEndNote" :disabled="endnoteImporting">{{ endnoteImporting ? '导入中...' : '从EndNote导入' }}</button>
+      <button class="lit-btn" style="background:#2e7d32;color:#fff" @click="importFromEndNote" :disabled="endnoteImporting">{{ endnoteImporting ? '导入中...' : '从EndNote导入（含PDF）' }}</button>
       <button class="lit-btn" @click="showExport = true; doExport()">导出</button>
       <button class="lit-btn" @click="doExportZip" :disabled="zipExporting">{{ zipExporting ? '打包中...' : '导出至Endnote(含PDF)' }}</button>
       <button class="lit-btn" @click="showSettings = !showSettings">设置</button>
@@ -1167,6 +1167,7 @@ function parseENW(text) {
 .lit-btn { padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-size: 0.85em; }
 .lit-btn:hover { background: var(--bg-card-hover); }
 .lit-btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+.lit-btn.new-record-btn { background: #e0e0e0; color: #000; border-color: #e0e0e0; }
 .lit-btn.danger { background: #e74c3c; color: white; border-color: #e74c3c; }
 .lit-btn.active { background: var(--accent-bg); border-color: var(--accent); }
 .lit-btn-sm { padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary); cursor: pointer; font-size: 0.8em; }
