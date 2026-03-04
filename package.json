@@ -1,6 +1,6 @@
 {
   "name": "paperbridge",
-  "version": "0.0.1",
+  "version": "2.0.1",
   "description": "PaperBridge - 科研文献管理与 AI 辅助桌面应用",
   "main": "electron/main.js",
   "scripts": {
@@ -42,8 +42,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.scitools.app",
-    "productName": "SciTools",
+    "appId": "com.paperbridge.app",
+    "productName": "PaperBridge",
     "asar": false,
     "directories": {
       "output": "dist-electron"
