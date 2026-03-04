@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const isDev = !app.isPackaged;
 let serverProcess = null;
 let mainWindow = null;
+const iconPath = path.join(__dirname, '../build/icon.ico');
 
 // 生产模式下用子进程启动后端（避免原生模块兼容问题）
 if (!isDev) {
@@ -45,6 +46,7 @@ async function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: 'PaperBridge',
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
