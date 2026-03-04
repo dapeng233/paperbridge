@@ -23,8 +23,8 @@ function resolveApiConfig(body) {
   }
 
   if (provider === 'dmxapi_key') {
-    if (!body.apiKey) throw new Error('请输入 dmxapi 密钥');
-    return { provider: 'dmxapi', apiKey: body.apiKey, useWallet: false };
+    if (!body.apiKey) throw new Error('请输入 Gemini 兼容接口密钥');
+    return { provider: 'dmxapi', apiKey: body.apiKey, useWallet: false, baseUrl: body.baseUrl || '' };
   }
 
   // 默认余额模式（走 dmxapi + 站长 key）
@@ -48,7 +48,7 @@ router.post('/text-to-image', async (req, res) => {
     const { prompt, model } = req.body;
     if (!prompt || !model) return res.status(400).json({ error: '缺少必要参数' });
 
-    const { provider, apiKey, useWallet, proxyUrl } = resolveApiConfig(req.body);
+    const { provider, apiKey, useWallet, proxyUrl, baseUrl } = resolveApiConfig(req.body);
 
     // 余额模式：先检查余额
     if (useWallet) {
@@ -61,7 +61,7 @@ router.post('/text-to-image', async (req, res) => {
     const service = provider === 'google' ? googleApi : dmxapi;
     const result = provider === 'google'
       ? await service.textToImage(prompt, model, apiKey, req.userId, proxyUrl)
-      : await service.textToImage(prompt, model, apiKey, req.userId);
+      : await service.textToImage(prompt, model, apiKey, req.userId, baseUrl);
 
     // 余额模式：扣费
     let walletInfo = null;
@@ -94,7 +94,7 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: '缺少必要参数或图片' });
     }
 
-    const { provider, apiKey, useWallet, proxyUrl } = resolveApiConfig(req.body);
+    const { provider, apiKey, useWallet, proxyUrl, baseUrl } = resolveApiConfig(req.body);
 
     if (useWallet) {
       const bal = wallet.getBalance(req.userId);
@@ -107,7 +107,7 @@ router.post('/image-to-image', upload.single('image'), async (req, res) => {
     const service = provider === 'google' ? googleApi : dmxapi;
     const result = provider === 'google'
       ? await service.imageToImage(prompt, model, apiKey, imageBuffer, mimeType, req.userId, proxyUrl)
-      : await service.imageToImage(prompt, model, apiKey, imageBuffer, mimeType, req.userId);
+      : await service.imageToImage(prompt, model, apiKey, imageBuffer, mimeType, req.userId, baseUrl);
 
     let walletInfo = null;
     if (useWallet) {

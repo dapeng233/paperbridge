@@ -36,9 +36,20 @@ const routes = [
     component: () => import('@/pages/Help.vue')
   },
   {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('@/pages/Settings.vue')
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('@/pages/Admin.vue')
+  },
+  {
+    path: '/note-editor',
+    name: 'NoteEditor',
+    component: () => import('@/pages/NoteEditor.vue'),
+    meta: { hideLayout: true }
   }
 ];
 

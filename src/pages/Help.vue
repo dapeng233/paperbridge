@@ -16,38 +16,13 @@
 
     <!-- DMX API 密钥帮助 -->
     <div class="help-panel">
-      <h3>DMX API 密钥获取</h3>
+      <h3>Gemini 兼容接口密钥获取（以 DMX API 为例）</h3>
       <div class="step" v-for="(s, i) in dmxSteps" :key="'dmx-'+i">
         <div class="step-num">{{ i + 1 }}</div>
         <div class="step-content" v-html="s"></div>
       </div>
       <div class="tip-box">
         API Key 只会显示一次，请妥善保存。丢失了可以重新创建。
-      </div>
-    </div>
-
-    <!-- 模型价格 -->
-    <div class="help-panel">
-      <h3>模型价格说明（Google API）</h3>
-      <table class="price-table">
-        <thead>
-          <tr><th>模型</th><th>输入价格</th><th>输出价格</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Gemini 2.5 Flash</td>
-            <td>￥2.19 / M tokens</td>
-            <td>￥219 / M tokens</td>
-          </tr>
-          <tr>
-            <td>Gemini 3 Pro Image Preview</td>
-            <td>￥14.6 / M tokens</td>
-            <td>￥876 / M tokens</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="tip-box">
-        Gemini 2.5 性价比高，适合日常使用；Gemini 3 效果更好但价格较高。
       </div>
     </div>
 
@@ -85,7 +60,7 @@ const googleSteps = [
 ];
 
 const dmxSteps = [
-  '打开 <a href="https://www.dmxapi.cn/rmb" target="_blank">dmxapi.cn</a>，注册账号并登录。',
+  '打开 <a href="https://www.dmxapi.cn/rmb" target="_blank">dmxapi.cn</a>（或其他 Gemini 兼容服务），注册账号并登录。',
   '点击右上角头像，选择「余额充值」，充值所需金额。',
   '在左侧菜单找到「API 令牌」，点击「添加令牌」创建 API Key。',
   '复制生成的 API Key（以 <code>sk-</code> 开头），粘贴到 AI 作图页面的密钥输入框中。'

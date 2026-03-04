@@ -14,6 +14,7 @@ const TRANSLATION_MODELS = [
 
 // 用单个模型尝试翻译
 async function tryTranslate(prompt, apiKey, model, baseUrl) {
+  const cleanKey = (apiKey || '').replace(/[\s\r\n\t\x00-\x1f\x7f-\x9f]+/g, '');
   const url = `${baseUrl || config.dmxapiBaseUrl}/v1/chat/completions`;
   const response = await axios.post(url, {
     model,
@@ -22,7 +23,7 @@ async function tryTranslate(prompt, apiKey, model, baseUrl) {
       { role: 'user', content: prompt }
     ]
   }, {
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${cleanKey}`, 'Content-Type': 'application/json' },
     timeout: config.timeout.translation
   });
   const text = response.data?.choices?.[0]?.message?.content;

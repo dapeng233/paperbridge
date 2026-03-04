@@ -3,8 +3,8 @@
     <div class="login-box">
       <!-- 登录 -->
       <template v-if="mode === 'login'">
-        <h2>SciTools</h2>
-        <p>科研工具箱 - 登录</p>
+        <h2>PaperBridge</h2>
+        <p>科研文献管理与 AI 辅助 - 登录</p>
         <input v-model="email" type="email" placeholder="邮箱" class="login-input" @keydown.enter="handleLogin" autofocus />
         <input v-model="password" type="password" placeholder="密码" class="login-input" @keydown.enter="handleLogin" />
         <button class="login-btn" @click="handleLogin" :disabled="loading">

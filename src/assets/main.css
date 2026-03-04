@@ -142,8 +142,9 @@ body {
 }
 
 .nav-item.disabled {
-  opacity: 0.35;
+  opacity: 0.5;
   pointer-events: none;
+  color: #999;
 }
 
 .nav-badge {

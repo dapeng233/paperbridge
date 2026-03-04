@@ -1,6 +1,11 @@
 <template>
   <div class="canvas-page">
-    <h2 class="page-title">✏️ 图片编辑</h2>
+    <div class="page-title-bar">
+      <div class="page-tab-bar">
+        <router-link to="/image-generator" class="page-tab">AI 生图</router-link>
+        <button class="page-tab active">图片编辑</button>
+      </div>
+    </div>
 
     <!-- 工具栏 -->
     <div class="toolbar">
@@ -228,10 +233,32 @@ function sendToImageGen() {
 </script>
 
 <style scoped>
-.page-title {
-  font-size: 1.6em;
-  color: var(--text-primary);
+.page-title-bar {
   margin-bottom: 16px;
+}
+.page-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border-color);
+}
+.page-tab {
+  padding: 8px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.95em;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.page-tab:hover { color: var(--text-primary); }
+.page-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
 }
 
 .toolbar {

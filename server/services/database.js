@@ -126,6 +126,7 @@ db.exec(`
     keywords TEXT DEFAULT '[]',
     ref_type TEXT DEFAULT 'journal',
     pdf_filename TEXT DEFAULT '',
+    research_note TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE SET NULL
@@ -173,6 +174,21 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 `);
+
+// 迁移：新增 research_note 字段
+try { db.exec("ALTER TABLE refs ADD COLUMN research_note TEXT DEFAULT ''"); } catch (_) { /* 已存在 */ }
+// 迁移：新增 note_title 字段
+try { db.exec("ALTER TABLE refs ADD COLUMN note_title TEXT DEFAULT ''"); } catch (_) { /* 已存在 */ }
+// 迁移：新增 trashed 字段（回收站）
+try { db.exec("ALTER TABLE refs ADD COLUMN trashed INTEGER DEFAULT 0"); } catch (_) { /* 已存在 */ }
+
+// 确保默认本地用户存在（本地模式下用于历史记录等外键引用）
+const localUser = db.prepare('SELECT id FROM users WHERE id = 1').get();
+if (!localUser) {
+  db.prepare(
+    "INSERT INTO users (id, email, password_hash, nickname) VALUES (1, 'local@scitools', '', '本地用户')"
+  ).run();
+}
 
 module.exports = db;
 

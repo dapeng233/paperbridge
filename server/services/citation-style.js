@@ -109,6 +109,16 @@ function formatBibliography(refs, style, startIndex) {
   return sorted.map((r, i) => applyTemplate(style.bibliography_template, r, (startIndex || 1) + i, config)).join('\n');
 }
 
+// 生成 unformatted 引文标记: {Author, Year #ID}
+function formatUnformatted(refs) {
+  return '{' + refs.map(r => {
+    let authors = [];
+    try { authors = typeof r.authors === 'string' ? JSON.parse(r.authors) : r.authors || []; } catch { authors = []; }
+    const surname = authors.length > 0 ? authors[0].trim().split(/\s+/).pop() : 'Unknown';
+    return surname + ', ' + (r.year || '') + ' #' + r.id;
+  }).join('; ') + '}';
+}
+
 // === 插入队列 ===
 function pushToQueue(refIds, styleId, type) {
   const r = db.prepare('INSERT INTO insert_queue (ref_ids, style_id, type) VALUES (?, ?, ?)').run(JSON.stringify(refIds), styleId, type || 'inline');
@@ -125,6 +135,6 @@ function pollQueue() {
 
 module.exports = {
   getStyles, getStyleById, createStyle, updateStyle, deleteStyle,
-  formatInlineCitation, formatBibliography, applyTemplate,
+  formatInlineCitation, formatBibliography, formatUnformatted, applyTemplate,
   pushToQueue, pollQueue
 };

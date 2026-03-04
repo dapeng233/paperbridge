@@ -57,6 +57,21 @@ router.put('/refs/:id', (req, res) => {
 });
 
 router.delete('/refs/:id', (req, res) => {
+  lit.trashRef(req.params.id);
+  res.json({ success: true });
+});
+
+// === 回收站 ===
+router.get('/trash', (req, res) => {
+  res.json(lit.getTrashedRefs());
+});
+
+router.post('/trash/:id/restore', (req, res) => {
+  lit.restoreRef(req.params.id);
+  res.json({ success: true });
+});
+
+router.delete('/trash/:id', (req, res) => {
   lit.deleteRef(req.params.id);
   res.json({ success: true });
 });
@@ -140,6 +155,137 @@ router.post('/import-pdfs', async (req, res) => {
   }
 });
 
+// === 从 EndNote 导入（含 PDF） ===
+router.post('/import-endnote', async (req, res) => {
+  try {
+    const { xml_path, library_folder, folder_id } = req.body;
+    if (!xml_path) return res.status(400).json({ error: '请指定 XML 文件路径' });
+
+    const libPath = lit.getLibraryPath();
+    if (!libPath) return res.status(400).json({ error: '请先设置文献库路径' });
+
+    const path = require('path');
+    const fs = require('fs');
+    const pdfDir = path.join(libPath, 'pdfs');
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+
+    // 读取并解析 EndNote XML
+    const xmlText = fs.readFileSync(xml_path, 'utf-8');
+    const records = lit.parseEndNoteXMLFull(xmlText);
+
+    // 在用户指定的 EndNote 文献库文件夹里找 .Data/PDF 目录
+    // EndNote 约定：library_folder 下有一个同名 .Data 子目录
+    let dataPdfDir = null;
+    if (library_folder && fs.existsSync(library_folder)) {
+      const entries = fs.readdirSync(library_folder, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && entry.name.endsWith('.Data')) {
+          const candidate = path.join(library_folder, entry.name, 'PDF');
+          if (fs.existsSync(candidate)) { dataPdfDir = candidate; break; }
+        }
+      }
+      // 也兼容用户直接选了 .Data 目录本身的情况
+      if (!dataPdfDir) {
+        const direct = path.join(library_folder, 'PDF');
+        if (fs.existsSync(direct)) dataPdfDir = direct;
+      }
+    }
+
+    const results = [];
+    let pdfCount = 0;
+
+    for (const rec of records) {
+      // 创建题录
+      const ref = lit.createRef({
+        folder_id: folder_id || null,
+        title: rec.title,
+        authors: rec.authors,
+        journal: rec.journal,
+        year: rec.year,
+        volume: rec.volume,
+        issue: rec.issue,
+        pages: rec.pages,
+        doi: rec.doi,
+        abstract: rec.abstract,
+        keywords: rec.keywords,
+        ref_type: rec.ref_type || 'journal'
+      });
+
+      // 保存笔记
+      if (rec.notes) lit.createNote(ref.id, rec.notes);
+      if (rec.research_notes) lit.updateRef(ref.id, { research_note: rec.research_notes });
+
+      // 尝试关联 PDF
+      let pdfLinked = false;
+      const candidatePaths = [];
+
+      // 1. 从 XML 内嵌的 pdf-urls 提取路径（file:// 绝对路径）
+      if (rec.pdf_urls && rec.pdf_urls.length) {
+        for (const pdfUrl of rec.pdf_urls) {
+          let p = pdfUrl;
+          if (p.startsWith('file:///')) p = p.slice(8);
+          else if (p.startsWith('file://')) p = p.slice(7);
+          p = decodeURIComponent(p);
+          // Windows：/C:/... → C:/...
+          if (process.platform === 'win32' && /^\/[a-zA-Z]:/.test(p)) p = p.slice(1);
+          candidatePaths.push(p);
+        }
+      }
+
+      // 2. 用户指定的文献库 .Data/PDF 目录中按标题/作者搜索
+      if (dataPdfDir) {
+        const found = findPdfInDir(dataPdfDir, rec.title, rec.authors, rec.doi);
+        if (found) candidatePaths.push(found);
+      }
+
+      // 依次尝试所有候选路径
+      for (const cp of candidatePaths) {
+        if (pdfLinked) break;
+        try {
+          if (fs.existsSync(cp)) {
+            const filename = lit.generatePdfFilename({ authors: rec.authors, year: rec.year, title: rec.title });
+            fs.copyFileSync(cp, path.join(pdfDir, filename));
+            lit.updateRef(ref.id, { pdf_filename: filename });
+            pdfLinked = true;
+            pdfCount++;
+          }
+        } catch (_) {}
+      }
+
+      results.push({ id: ref.id, title: rec.title, pdf: pdfLinked });
+    }
+
+    res.json({ success: true, count: records.length, pdfCount, results });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// 在 .Data/PDF 目录中递归查找匹配的 PDF
+function findPdfInDir(dir, title, authors, doi) {
+  const fs = require('fs');
+  const path = require('path');
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const found = findPdfInDir(fullPath, title, authors, doi);
+        if (found) return found;
+      } else if (entry.name.toLowerCase().endsWith('.pdf')) {
+        // 文件名匹配：包含标题关键词或作者名
+        const nameLC = entry.name.toLowerCase();
+        const titleWords = (title || '').toLowerCase().split(/\s+/).filter(w => w.length > 3);
+        const authorFirst = (authors && authors[0]) ? authors[0].toLowerCase().split(/[,\s]+/)[0] : '';
+        const titleMatch = titleWords.length > 0 && titleWords.filter(w => nameLC.includes(w)).length >= Math.min(2, titleWords.length);
+        const authorMatch = authorFirst && nameLC.includes(authorFirst);
+        if (titleMatch || authorMatch) return fullPath;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
 // 读取本地文件（导入用）
 router.get('/read-file', (req, res) => {
   const filePath = req.query.path;
@@ -152,6 +298,11 @@ router.get('/read-file', (req, res) => {
 });
 
 // === 笔记 ===
+// 批量获取有笔记的题录 ID 列表（性能优化）
+router.get('/notes/refs-with-notes', (req, res) => {
+  res.json(lit.getRefsWithNotes());
+});
+
 router.get('/refs/:id/notes', (req, res) => {
   res.json(lit.getNotes(req.params.id));
 });
@@ -181,7 +332,178 @@ router.post('/export', (req, res) => {
   }
 });
 
+// === 打包导出 ZIP（EndNote XML + PDFs） ===
+router.post('/export-zip', async (req, res) => {
+  try {
+    const { ref_ids } = req.body;
+    if (!ref_ids?.length) return res.status(400).json({ error: '没有选择题录' });
+
+    const archiver = require('archiver');
+    const refsData = ref_ids.map(id => lit.getRefById(id)).filter(Boolean);
+    const libPath = lit.getLibraryPath();
+
+    // 生成 XML 并收集 PDF
+    const xmlContent = lit.exportRefs(ref_ids, 'endnote-xml');
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename=scitools-export.zip');
+
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.pipe(res);
+    archive.append(xmlContent, { name: 'references.xml' });
+
+    // 添加 PDF 文件
+    if (libPath) {
+      for (const ref of refsData) {
+        if (ref.pdf_filename) {
+          const pdfPath = require('path').join(libPath, 'pdfs', ref.pdf_filename);
+          if (require('fs').existsSync(pdfPath)) {
+            archive.file(pdfPath, { name: 'pdfs/' + ref.pdf_filename });
+          }
+        }
+      }
+    }
+
+    await archive.finalize();
+  } catch (e) {
+    if (!res.headersSent) res.status(500).json({ error: e.message });
+  }
+});
+
 // === AI 辅助匹配 ===
+
+// 测试 AI API 连接
+router.post('/ai-test', async (req, res) => {
+  try {
+    const { api_key, base_url, model } = req.body;
+    if (!api_key) return res.status(400).json({ error: '未配置 AI API Key' });
+    const url = (base_url || 'https://api.openai.com') + '/v1/chat/completions';
+    const https = require('https');
+    const http = require('http');
+    const { URL } = require('url');
+    const parsed = new URL(url);
+    const mod = parsed.protocol === 'https:' ? https : http;
+
+    const payload = JSON.stringify({
+      model: model || 'gpt-4o-mini',
+      messages: [{ role: 'user', content: 'Hi' }],
+      max_tokens: 5
+    });
+
+    const json = await new Promise((resolve, reject) => {
+      const r = mod.request(parsed, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${api_key}` } }, (resp) => {
+        let d = '';
+        resp.on('data', c => d += c);
+        resp.on('end', () => resolve({ status: resp.statusCode, body: d }));
+      });
+      r.on('error', reject);
+      r.write(payload);
+      r.end();
+    });
+
+    if (json.status === 200) {
+      res.json({ success: true, message: 'API 连接正常' });
+    } else {
+      const err = JSON.parse(json.body);
+      res.json({ success: false, error: err.error?.message || `HTTP ${json.status}` });
+    }
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// AI 两级摘要：Notes 长摘要 + Research Notes 短标签
+router.post('/refs/:id/ai-summary', async (req, res) => {
+  try {
+    const { api_key, base_url, model } = req.body;
+    if (!api_key) return res.status(400).json({ error: '请先设置 AI API Key' });
+    const ref = lit.getRefById(req.params.id);
+    if (!ref) return res.status(404).json({ error: '题录不存在' });
+
+    const notes = lit.getNotes(req.params.id);
+    const notesText = notes.map(n => (n.content || '').replace(/<[^>]+>/g, '')).filter(Boolean).join('\n');
+
+    // 解析作者
+    let authorsStr = '无';
+    try {
+      const arr = typeof ref.authors === 'string' ? JSON.parse(ref.authors) : (ref.authors || []);
+      authorsStr = arr.join(', ') || '无';
+    } catch { authorsStr = ref.authors || '无'; }
+
+    // 尝试读取自定义提示词
+    let customPrompt = '';
+    try { customPrompt = lit.getSetting('ai_summary_prompt') || ''; } catch {}
+
+    const url = (base_url || 'https://api.openai.com') + '/v1/chat/completions';
+    const https = require('https');
+    const http = require('http');
+    const { URL } = require('url');
+    const parsed = new URL(url);
+    const mod = parsed.protocol === 'https:' ? https : http;
+
+    let prompt;
+    if (customPrompt) {
+      // 使用自定义提示词，替换变量
+      prompt = customPrompt
+        .replace(/\$\{title\}/g, ref.title || '无')
+        .replace(/\$\{abstract\}/g, ref.abstract || '无')
+        .replace(/\$\{authors\}/g, authorsStr)
+        .replace(/\$\{journal\}/g, ref.journal || '无')
+        .replace(/\$\{year\}/g, ref.year || '无')
+        .replace(/\$\{notes\}/g, notesText || '无');
+    } else {
+      // 默认提示词
+      prompt = `你是学术文献分析助手。根据以下信息生成两个摘要。
+
+标题：${ref.title || '无'}
+作者：${authorsStr}
+期刊：${ref.journal || '无'}
+年份：${ref.year || '无'}
+摘要：${ref.abstract || '无'}
+用户笔记：${notesText || '无'}
+
+请返回JSON格式：
+{
+  "notes_summary": "笔记精华摘要，50-200字，提炼核心发现和关键观点",
+  "research_note": "一个极短的标签，概括核心贡献。如果标题是中文则用中文（10字符以内含空格），如果标题是英文则用英文（20字符以内含空格和符号）"
+}
+
+只返回JSON，不要其他文字。`;
+    }
+
+    const payload = JSON.stringify({
+      model: model || 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0
+    });
+
+    const json = await new Promise((resolve, reject) => {
+      const r = mod.request(parsed, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${api_key}` } }, (resp) => {
+        let d = '';
+        resp.on('data', c => d += c);
+        resp.on('end', () => resolve(d));
+      });
+      r.on('error', reject);
+      r.write(payload);
+      r.end();
+    });
+
+    const result = JSON.parse(json);
+    const content = result.choices?.[0]?.message?.content || '{}';
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const summary = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+
+    // 保存 research_note 到数据库
+    if (summary.research_note) {
+      lit.updateRef(req.params.id, { research_note: summary.research_note });
+    }
+
+    res.json(summary);
+  } catch (e) {
+    res.status(500).json({ error: 'AI 总结失败: ' + e.message });
+  }
+});
+
 router.post('/ai-match', async (req, res) => {
   try {
     const { text, api_key, base_url, model } = req.body;
@@ -288,11 +610,14 @@ router.delete('/styles/:id', (req, res) => {
 // === 格式化引用（供主程序和 Add-in 使用） ===
 router.post('/cite/format', (req, res) => {
   try {
-    const { ref_ids, style_id, start_index } = req.body;
-    const style = cite.getStyleById(style_id);
-    if (!style) return res.status(400).json({ error: '样式不存在' });
+    const { ref_ids, style_id, start_index, unformatted } = req.body;
     const refs = ref_ids.map(id => lit.getRefById(id)).filter(Boolean);
     if (refs.length === 0) return res.status(400).json({ error: '未找到题录' });
+    if (unformatted) {
+      return res.json({ inline: cite.formatUnformatted(refs), bibliography: '' });
+    }
+    const style = cite.getStyleById(style_id);
+    if (!style) return res.status(400).json({ error: '样式不存在' });
     const inline = cite.formatInlineCitation(refs, style, start_index || 1);
     const bibliography = cite.formatBibliography(refs, style, start_index || 1);
     res.json({ inline, bibliography });

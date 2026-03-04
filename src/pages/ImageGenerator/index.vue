@@ -1,6 +1,11 @@
 <template>
   <div class="image-generator">
-    <h2 class="page-title">AI 生图 <router-link to="/canvas" class="edit-link">图片编辑</router-link></h2>
+    <div class="page-title-bar">
+      <div class="page-tab-bar">
+        <button class="page-tab active">AI 生图</button>
+        <router-link to="/canvas" class="page-tab">图片编辑</router-link>
+      </div>
+    </div>
     <div class="generator-layout">
       <!-- 左侧：输入面板 -->
       <div class="panel input-panel">
@@ -10,30 +15,25 @@
         <div class="form-group">
           <label>使用方式</label>
           <div class="mode-switch">
+            <button class="mode-btn" :class="{ active: billingMode === 'dmxapi' }" @click="switchMode('dmxapi')">Gemini 兼容接口</button>
             <button class="mode-btn" :class="{ active: billingMode === 'google' }" @click="switchMode('google')">Google AI</button>
-            <button class="mode-btn" :class="{ active: billingMode === 'dmxapi' }" @click="switchMode('dmxapi')">DMX API</button>
-            <button class="mode-btn" :class="{ active: billingMode === 'wallet' }" @click="switchMode('wallet')">余额</button>
           </div>
-          <small v-if="billingMode !== 'wallet'">API 密钥请在 <router-link to="/api-config">API 配置</router-link> 中设置</small>
+          <small>API 密钥请在 <router-link to="/api-config?tab=image">API 配置</router-link> 中设置</small>
         </div>
 
-        <!-- 余额模式信息 -->
-        <div v-if="billingMode === 'wallet'" class="form-group">
-          <div class="wallet-info">
-            <span class="wallet-balance">余额: ￥{{ walletBalance.toFixed(2) }}</span>
-            <span class="wallet-price">每张约 ￥0.3~0.5</span>
-            <router-link to="/wallet" class="wallet-link">充值</router-link>
-          </div>
-        </div>
-
-        <!-- 模型选择 -->
+        <!-- 模型名称输入 -->
         <div class="form-group">
-          <label>选择模型 *</label>
-          <select v-model="selectedModel" class="input-field">
-            <option v-for="m in models" :key="m.id" :value="m.id">
-              {{ m.name }}
-            </option>
-          </select>
+          <label>模型名称 *</label>
+          <input v-model="selectedModel" type="text" class="input-field" placeholder="输入模型名称，如 gemini-3.1-flash-image-preview" />
+          <small class="model-hints">
+            常用模型：
+            <span class="model-tag" @click="selectedModel = 'gemini-3.1-flash-image-preview'">gemini-3.1-flash-image-preview</span>
+            <span class="model-alias">Nano Banana 2 🍌</span>
+            <span class="model-tag" @click="selectedModel = 'gemini-3-pro-image-preview'">gemini-3-pro-image-preview</span>
+            <span class="model-alias">Nano Banana PRO 🍌</span>
+            <span class="model-tag" @click="selectedModel = 'gemini-2.5-flash-image'">gemini-2.5-flash-image</span>
+            <span class="model-alias">Nano Banana 🍌</span>
+          </small>
         </div>
 
         <!-- 生成方式 -->
@@ -111,11 +111,8 @@
               <p><strong>模型:</strong> {{ result.model }}</p>
               <p><strong>提示词:</strong> {{ result.prompt }}</p>
               <p v-if="result.cost && result.cost.tokenUsage">
-                <strong>Token 消耗:</strong>
-                输入 {{ result.cost.tokenUsage.input || '-' }} / 输出 {{ result.cost.tokenUsage.output || '-' }}
-              </p>
-              <p v-else-if="result.cost">
-                <strong>Token 消耗:</strong> {{ result.cost.description }}
+                <strong>Token:</strong>
+                输入 {{ result.cost.tokenUsage.input || '-' }} · 输出 {{ result.cost.tokenUsage.output || '-' }}
               </p>
             </div>
             <div class="result-actions">
@@ -123,9 +120,11 @@
               <a :href="result.imageUrl" target="_blank" class="btn btn-secondary">新标签页打开</a>
               <router-link :to="'/canvas?image=' + encodeURIComponent(result.imageUrl)" class="btn btn-secondary">编辑图片</router-link>
             </div>
+            <!-- 余额扣费信息（暂时隐藏）
             <div v-if="result.walletInfo" class="wallet-deduct-info">
               本次扣费 ￥{{ result.walletInfo.charged }} · 剩余余额 ￥{{ result.walletInfo.balance.toFixed(2) }}
             </div>
+            -->
           </div>
           <div v-else-if="generating" class="empty-state">
             <p>{{ statusText }}</p>
@@ -171,13 +170,12 @@ const route = useRoute();
 const googleApiKey = ref('');
 const googleProxy = ref('');
 const dmxapiKey = ref('');
-const billingMode = ref('google');
-const walletBalance = ref(0);
-const selectedModel = ref('');
+const dmxBaseUrl = ref('');
+const billingMode = ref('dmxapi');
+const selectedModel = ref('gemini-3.1-flash-image-preview');
 const mode = ref('text');
 const prompt = ref('');
 const imagePrompt = ref('');
-const models = ref([]);
 const generating = ref(false);
 const result = ref(null);
 const errorMsg = ref('');
@@ -190,8 +188,6 @@ const selectedFile = ref(null);
 
 onMounted(() => {
   loadApiConfig();
-  loadModels();
-  loadWalletBalance();
   if (route.query.from === 'canvas') {
     const dataUrl = sessionStorage.getItem('canvasImage');
     if (dataUrl) {
@@ -205,42 +201,23 @@ onMounted(() => {
   }
 });
 
-async function loadWalletBalance() {
-  try {
-    const data = await api.get('/api/wallet/balance');
-    walletBalance.value = data.balance || 0;
-  } catch (e) {
-    console.error('加载余额失败:', e);
-  }
-}
-
 async function loadApiConfig() {
   try {
-    const [gk, gp, dk] = await Promise.all([
+    const [gk, gp, dk, db] = await Promise.all([
       api.get('/api/literature/settings/google_api_key'),
       api.get('/api/literature/settings/google_proxy'),
-      api.get('/api/literature/settings/dmx_api_key')
+      api.get('/api/literature/settings/dmx_api_key'),
+      api.get('/api/literature/settings/dmx_base_url')
     ]);
     googleApiKey.value = gk.value || '';
     googleProxy.value = gp.value || '';
     dmxapiKey.value = dk.value || '';
+    dmxBaseUrl.value = db.value || '';
   } catch {}
-}
-
-async function loadModels() {
-  try {
-    const provider = billingMode.value === 'google' ? 'google' : 'wallet';
-    const data = await api.get(`/api/models?provider=${provider}`);
-    models.value = data;
-    if (data.length > 0) selectedModel.value = data[0].id;
-  } catch (e) {
-    console.error('加载模型失败:', e);
-  }
 }
 
 function switchMode(newMode) {
   billingMode.value = newMode;
-  loadModels();
 }
 
 function handleFileSelect(e) {
@@ -287,10 +264,9 @@ function compressImage(file, maxWidth = 1024, quality = 0.8) {
 }
 
 async function handleGenerate() {
-  if (billingMode.value === 'dmxapi' && !dmxapiKey.value.trim()) { errorMsg.value = '请先在「API 配置」中设置 DMX API 密钥'; return; }
+  if (billingMode.value === 'dmxapi' && !dmxapiKey.value.trim()) { errorMsg.value = '请先在「API 配置」中设置 Gemini 兼容接口密钥'; return; }
   if (billingMode.value === 'google' && !googleApiKey.value.trim()) { errorMsg.value = '请先在「API 配置」中设置 Google API Key'; return; }
-  if (billingMode.value === 'wallet' && walletBalance.value < 0.35) { errorMsg.value = '余额不足，请先充值'; return; }
-  if (!selectedModel.value) { errorMsg.value = '请选择模型'; return; }
+  if (!selectedModel.value.trim()) { errorMsg.value = '请输入模型名称'; return; }
 
   if (mode.value === 'text') {
     if (!prompt.value.trim()) { errorMsg.value = '请输入提示词'; return; }
@@ -314,16 +290,13 @@ async function generateTextToImage() {
       body.provider = 'google';
       body.googleApiKey = googleApiKey.value;
       if (googleProxy.value.trim()) body.proxyUrl = googleProxy.value.trim();
-    } else if (billingMode.value === 'dmxapi') {
+    } else {
       body.provider = 'dmxapi_key';
       body.apiKey = dmxapiKey.value;
-    } else {
-      body.provider = 'wallet';
-      body.useWallet = true;
+      if (dmxBaseUrl.value.trim()) body.baseUrl = dmxBaseUrl.value.trim();
     }
     const data = await api.post('/api/text-to-image', body);
     result.value = data;
-    if (data.walletInfo) walletBalance.value = data.walletInfo.balance;
   } catch (e) {
     errorMsg.value = e.message;
   } finally {
@@ -348,16 +321,13 @@ async function generateImageToImage() {
       formData.append('provider', 'google');
       formData.append('googleApiKey', googleApiKey.value);
       if (googleProxy.value.trim()) formData.append('proxyUrl', googleProxy.value.trim());
-    } else if (billingMode.value === 'dmxapi') {
+    } else {
       formData.append('provider', 'dmxapi_key');
       formData.append('apiKey', dmxapiKey.value);
-    } else {
-      formData.append('provider', 'wallet');
-      formData.append('useWallet', 'true');
+      if (dmxBaseUrl.value.trim()) formData.append('baseUrl', dmxBaseUrl.value.trim());
     }
     const data = await api.postForm('/api/image-to-image', formData);
     result.value = data;
-    if (data.walletInfo) walletBalance.value = data.walletInfo.balance;
   } catch (e) {
     errorMsg.value = e.message;
   } finally {
@@ -396,25 +366,33 @@ function formatTime(ts) {
 </script>
 
 <style scoped>
-.page-title {
-  font-size: 1.3em;
-  color: var(--text-primary);
+.page-title-bar {
   margin-bottom: 16px;
-  font-weight: 600;
+}
+.page-tab-bar {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 0;
+  border-bottom: 2px solid var(--border-color);
 }
-.edit-link {
-  font-size: 0.55em;
-  padding: 4px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  color: var(--text-secondary);
+.page-tab {
+  padding: 8px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.95em;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
   text-decoration: none;
-  font-weight: 400;
 }
-.edit-link:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.page-tab:hover { color: var(--text-primary); }
+.page-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
 
 .generator-layout {
   display: grid;
@@ -796,5 +774,31 @@ function formatTime(ts) {
 .tip-inline a {
   color: var(--text-secondary);
   text-decoration: underline;
+}
+
+.model-hints {
+  line-height: 2;
+}
+
+.model-tag {
+  display: inline-block;
+  background: var(--bg-tag);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+  cursor: pointer;
+  color: var(--accent);
+  transition: background 0.15s;
+}
+
+.model-tag:hover {
+  background: var(--border-color);
+}
+
+.model-alias {
+  color: var(--text-muted);
+  font-size: 0.85em;
+  margin-right: 6px;
 }
 </style>

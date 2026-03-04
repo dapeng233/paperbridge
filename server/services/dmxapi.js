@@ -6,16 +6,22 @@ const storage = require('./storage');
 // 可用模型列表
 const MODELS = [
   {
-    id: 'gemini-2.5-flash-image',
-    name: 'Gemini 2.5 Flash Image',
+    id: 'gemini-3.1-flash-image-preview',
+    name: 'Gemini 3.1 Flash Image (Nano Banana 2 🍌)',
     type: 'image',
     pricing: { type: 'token', inputPrice: 2.19, outputPrice: 219, minCharge: 0.35, unit: '元/M tokens' }
   },
   {
     id: 'gemini-3-pro-image-preview',
-    name: 'Gemini 3 Pro Image Preview',
+    name: 'Gemini 3 Pro Image Preview (Nano Banana PRO 🍌)',
     type: 'image',
     pricing: { type: 'token', inputPrice: 14.6, outputPrice: 876, minCharge: 0.5, unit: '元/M tokens' }
+  },
+  {
+    id: 'gemini-2.5-flash-image',
+    name: 'Gemini 2.5 Flash Image (Nano Banana 🍌)',
+    type: 'image',
+    pricing: { type: 'token', inputPrice: 2.19, outputPrice: 219, minCharge: 0.35, unit: '元/M tokens' }
   }
 ];
 
@@ -79,18 +85,25 @@ function calculateCost(model, usage) {
   };
 }
 
+// 清理 API Key 中的不可见字符
+function cleanApiKey(key) {
+  return (key || '').replace(/[\s\r\n\t\x00-\x1f\x7f-\x9f]+/g, '');
+}
+
 // 文生图
-async function textToImage(prompt, model, apiKey, userId) {
+async function textToImage(prompt, model, apiKey, userId, customBaseUrl) {
+  const cleanKey = cleanApiKey(apiKey);
   const finalPrompt = containsChinese(prompt)
-    ? await translateToEnglish(prompt, apiKey)
+    ? await translateToEnglish(prompt, cleanKey)
     : prompt;
 
-  const url = `${config.dmxapiBaseUrl}/v1beta/models/${model}:generateContent`;
+  const baseUrl = customBaseUrl || config.dmxapiBaseUrl;
+  const url = `${baseUrl}/v1beta/models/${model}:generateContent`;
   const response = await axios.post(url, {
     contents: [{ parts: [{ text: finalPrompt }] }],
     generationConfig: getGenerationConfig(model)
   }, {
-    headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+    headers: { 'x-goog-api-key': cleanKey, 'Content-Type': 'application/json' },
     timeout: config.timeout.textToImage,
     maxContentLength: Infinity,
     maxBodyLength: Infinity
@@ -112,15 +125,17 @@ async function textToImage(prompt, model, apiKey, userId) {
 }
 
 // 图生图
-async function imageToImage(prompt, model, apiKey, imageBuffer, mimeType, userId) {
+async function imageToImage(prompt, model, apiKey, imageBuffer, mimeType, userId, customBaseUrl) {
+  const cleanKey = cleanApiKey(apiKey);
   const base64Image = imageBuffer.toString('base64');
 
   const translatedPrompt = containsChinese(prompt)
-    ? await translateToEnglish(prompt, apiKey)
+    ? await translateToEnglish(prompt, cleanKey)
     : prompt;
   const editInstruction = `Edit this image according to the following instruction. You must return the modified image: ${translatedPrompt}`;
 
-  const url = `${config.dmxapiBaseUrl}/v1beta/models/${model}:generateContent`;
+  const baseUrl = customBaseUrl || config.dmxapiBaseUrl;
+  const url = `${baseUrl}/v1beta/models/${model}:generateContent`;
   const response = await axios.post(url, {
     contents: [{
       parts: [
@@ -130,7 +145,7 @@ async function imageToImage(prompt, model, apiKey, imageBuffer, mimeType, userId
     }],
     generationConfig: getGenerationConfig(model)
   }, {
-    headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+    headers: { 'x-goog-api-key': cleanKey, 'Content-Type': 'application/json' },
     timeout: config.timeout.imageToImage,
     maxContentLength: Infinity,
     maxBodyLength: Infinity

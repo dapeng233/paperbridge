@@ -16,7 +16,7 @@ function saveHistory(record, userId) {
     `INSERT INTO history (user_id, mode, prompt, translated_prompt, model, size, image_filename, cost)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
-    userId || 0,
+    userId || 1,
     record.mode || 'text2img',
     record.prompt || '',
     record.translatedPrompt || '',

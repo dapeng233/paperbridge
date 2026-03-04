@@ -1,12 +1,18 @@
 <template>
+  <!-- 首次启动配置向导 -->
+  <SetupWizard />
+
   <!-- 登录遮罩（仅在需要登录功能时显示） -->
   <LoginOverlay v-if="showLogin" @login-success="onLoginSuccess" />
 
   <!-- 主应用 -->
-  <div class="app-layout">
+  <div v-if="hideLayout" class="fullscreen-content">
+    <router-view />
+  </div>
+  <div v-else class="app-layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h1 class="app-title">SciTools</h1>
+        <h1 class="app-title">PaperBridge</h1>
         <p class="app-subtitle">v{{ currentVersion }}</p>
       </div>
       <nav class="sidebar-nav">
@@ -22,15 +28,15 @@
         </router-link>
       </nav>
       <div class="sidebar-footer">
-        <button class="theme-toggle" @click="toggleTheme">
-          <span class="nav-label">{{ isDark ? '浅色模式' : '深色模式' }}</span>
-        </button>
         <button class="theme-toggle" @click="checkForUpdates" :disabled="updateChecking">
           <span class="nav-label">{{ updateChecking ? '检查中...' : '检查更新' }}</span>
           <span v-if="hasUpdate" class="update-dot"></span>
         </button>
         <router-link to="/help" class="nav-item">
           <span class="nav-label">使用帮助</span>
+        </router-link>
+        <router-link to="/settings" class="nav-item">
+          <span class="nav-label">设置</span>
         </router-link>
       </div>
     </aside>
@@ -47,15 +53,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import LoginOverlay from '@/components/LoginOverlay.vue';
+import SetupWizard from '@/components/SetupWizard.vue';
+
+const route = useRoute();
+const hideLayout = computed(() => route.meta?.hideLayout === true);
 
 const authStore = useAuthStore();
 const showLogin = ref(false);
 
 const isDark = ref(false);
-const currentVersion = '1.0.0';
+const currentVersion = '0.0.1';
 const updateChecking = ref(false);
 const hasUpdate = ref(false);
 const latestVersion = ref('');
@@ -64,8 +75,7 @@ const updateUrl = ref('');
 const navItems = ref([
   { path: '/literature', label: '文献助手', disabled: false },
   { path: '/image-generator', label: 'AI 生图', disabled: false },
-  { path: '/api-config', label: 'API 配置', disabled: false },
-  { path: '/wallet', label: '账户余额', disabled: false }
+  { path: '/api-config', label: 'API 配置', disabled: false }
 ]);
 
 onMounted(async () => {
@@ -73,6 +83,10 @@ onMounted(async () => {
   if (saved === 'dark') {
     isDark.value = true;
     document.documentElement.setAttribute('data-theme', 'dark');
+  }
+  const savedFontSize = localStorage.getItem('ui-font-size');
+  if (savedFontSize) {
+    document.documentElement.style.setProperty('--font-size-base', savedFontSize + 'px');
   }
   await authStore.checkAuth();
   checkForUpdates(true);
@@ -102,7 +116,7 @@ function compareVersions(v1, v2) {
 async function checkForUpdates(silent = false) {
   updateChecking.value = true;
   try {
-    const res = await fetch('https://api.github.com/repos/dapeng233/scitools/releases/latest', {
+    const res = await fetch('https://api.github.com/repos/dapeng233/paperbridge/releases/latest', {
       headers: { 'Accept': 'application/vnd.github.v3+json' }
     });
     if (!res.ok) throw new Error('请求失败');
@@ -129,6 +143,12 @@ function onLoginSuccess() {}
 </script>
 
 <style scoped>
+.fullscreen-content {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .update-banner {
   display: flex;
   align-items: center;

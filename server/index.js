@@ -69,10 +69,15 @@ app.use('/api/admin', (req, res, next) => {
 const literatureRouter = require('./routes/literature');
 app.use('/api/literature', literatureRouter);
 
-// 需要鉴权的 API 路由
-app.use('/api', authMiddleware);
+// 图片生成路由（API 密钥由前端传入，不需要用户鉴权）
+app.use('/api', (req, res, next) => { req.userId = req.userId || 1; next(); });
 app.use('/api', imageRouter);
+
+// 历史记录路由（本地功能，不需要鉴权）
 app.use('/api/history', historyRouter);
+
+// 需要鉴权的 API 路由（暂时禁用）
+// app.use('/api', authMiddleware);
 app.use('/api/wallet', walletRouter);
 app.use('/api/payment', paymentRouter);
 
@@ -82,7 +87,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(config.port, () => {
-  console.log(`\n✨ SciTools 后端已启动`);
+  console.log(`\n✨ PaperBridge 后端已启动`);
   console.log(`📱 http://localhost:${config.port}`);
 });
 
