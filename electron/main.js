@@ -16,7 +16,26 @@ if (!isDev) {
   });
 }
 
-function createWindow() {
+// 等待服务器就绪
+async function waitForServer(url, maxRetries = 30) {
+  const http = require('http');
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await new Promise((resolve, reject) => {
+        http.get(url, (res) => {
+          if (res.statusCode === 200) resolve();
+          else reject();
+        }).on('error', reject);
+      });
+      return true;
+    } catch {
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+  return false;
+}
+
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -34,9 +53,15 @@ function createWindow() {
     // 开发模式：加载 Vite dev server
     mainWindow.loadURL('http://localhost:5173');
   } else {
-    // 生产模式：加载构建后的文件（通过 Express 服务）
+    // 生产模式：等待后端就绪后加载
     const config = require('../server/config');
-    mainWindow.loadURL(`http://localhost:${config.port}`);
+    const serverUrl = `http://localhost:${config.port}`;
+    const ready = await waitForServer(serverUrl);
+    if (ready) {
+      mainWindow.loadURL(serverUrl);
+    } else {
+      mainWindow.loadURL(`data:text/html,<h1>服务器启动失败，请重启应用</h1>`);
+    }
   }
 
   mainWindow.on('closed', () => {
@@ -45,7 +70,9 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  await createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (serverProcess) serverProcess.kill();
