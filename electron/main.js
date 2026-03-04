@@ -11,9 +11,10 @@ let mainWindow = null;
 if (!isDev) {
   const appPath = path.dirname(app.getPath('exe'));
   const serverPath = path.join(__dirname, '../server/index.js');
-  serverProcess = spawn('node', [serverPath], {
+  // 使用 Electron 内置的 Node.js 运行后端，避免原生模块版本不匹配
+  serverProcess = spawn(process.execPath, [serverPath], {
     stdio: 'inherit',
-    cwd: appPath,  // 设置工作目录为应用安装目录
+    cwd: appPath,
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
   });
 }
