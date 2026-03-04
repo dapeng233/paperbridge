@@ -1,8 +1,21 @@
 # PaperBridge
 
-科研文献管理与 AI 辅助桌面应用。
+**连接 EndNote 与 AI 的桥梁** — 科研文献管理与 AI 辅助桌面应用。
 
-A desktop app for scientific literature management and AI-assisted research.
+A bridge between EndNote and AI — desktop app for scientific literature management and AI-assisted research.
+
+---
+
+## 为什么选择 PaperBridge？
+
+### 与 EndNote 无缝衔接
+- **一键导入导出** — 无缝对接 EndNote 题录及对应 PDF，告别繁琐的手动操作
+- **AI 智能生成题录** — 不用再去逐篇下载专业题录文件，只需提供格式和关键信息，AI 即可一键生成可直接导入 EndNote 使用的标准题录
+- **流畅连接 EndNote 与 AI** — 致力于让 AI 能力真正融入你的文献管理工作流
+
+### 更流畅的 Nano Banana 使用体验
+- **Nano Banana 🍌 深度集成** — 提供比网页端更流畅、更高效的 AI 生图体验
+- **双通道接入** — Gemini 兼容接口（如 DMX API） / Google AI 直连
 
 ---
 
@@ -13,13 +26,13 @@ A desktop app for scientific literature management and AI-assisted research.
 - **PDF 导入** — 单篇/批量导入 PDF，自动通过 CrossRef 提取元数据
 - **引用格式化** — 内置 GB/T 7714、APA 等多种引用样式
 - **AI 笔记总结** — 通过 OpenAI 兼容接口自动生成文献摘要
+- **AI 题录识别** — 从论文参考文献列表中智能识别并生成结构化题录
 
 ### AI 生图
 - **文生图** — 输入文字描述，AI 生成科研插图（支持中文，自动翻译）
 - **图生图** — 上传图片 + 文字指令，AI 编辑修改
 - **画板编辑** — 内置画板，对生成图片进行标注和编辑
-- **多模型支持** — 支持 Gemini 系列模型（Nano Banana 🍌）
-- **双通道** — Gemini 兼容接口（如 DMX API） / Google AI 直连
+- **多模型支持** — 支持 Gemini 系列模型
 
 ### 其他
 - **API 配置** — 灵活配置 API Key 和代理地址
