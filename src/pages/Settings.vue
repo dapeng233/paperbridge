@@ -33,7 +33,7 @@
     <div class="settings-panel">
       <h3>关于</h3>
       <div class="about-info">
-        <p><strong>PaperBridge</strong> v0.0.1</p>
+        <p><strong>PaperBridge</strong> v0.0.2</p>
         <p class="about-desc">科研文献管理与 AI 辅助工具</p>
       </div>
     </div>
