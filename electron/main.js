@@ -292,18 +292,13 @@ ipcMain.handle('open-external', async (_, url) => {
 
 // 获取首次启动标记
 ipcMain.handle('get-first-launch', () => {
-  const appPath = isDev ? path.join(__dirname, '..') : path.dirname(app.getPath('exe'));
-  const flagFile = path.join(appPath, 'data', '.first-launch-done');
+  const flagFile = path.join(app.getPath('userData'), '.first-launch-done');
   return !fs.existsSync(flagFile);
 });
 
 // 设置首次启动完成
 ipcMain.handle('set-first-launch-done', () => {
-  const appPath = isDev ? path.join(__dirname, '..') : path.dirname(app.getPath('exe'));
-  const dataDir = path.join(appPath, 'data');
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-  fs.writeFileSync(path.join(dataDir, '.first-launch-done'), '');
+  const flagFile = path.join(app.getPath('userData'), '.first-launch-done');
+  fs.writeFileSync(flagFile, new Date().toISOString());
   return true;
 });
