@@ -200,15 +200,6 @@
       <div class="modal-box">
         <h3>{{ editingRef ? '编辑题录' : '新建题录' }}</h3>
 
-        <!-- AI 识别区域 -->
-        <div style="margin-bottom:16px;padding:12px;background:#f5f5f5;border-radius:6px">
-          <div style="font-size:0.9em;margin-bottom:6px;color:#666">AI 自动识别</div>
-          <textarea v-model="editorAiInput" rows="3" placeholder="粘贴参考文献文本，AI 将自动识别并填充表单..." style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:0.9em"></textarea>
-          <button class="lit-btn primary" @click="fillFormWithAI" :disabled="editorAiLoading" style="margin-top:6px">
-            {{ editorAiLoading ? '识别中...' : 'AI 识别并填充' }}
-          </button>
-        </div>
-
         <div class="form-grid">
           <label>标题</label><input v-model="form.title" />
           <label>作者</label><input v-model="form.authorsStr" placeholder="用逗号分隔" />
@@ -229,6 +220,16 @@
           <label>摘要</label><textarea v-model="form.abstract" rows="3"></textarea>
           <label>关键词</label><input v-model="form.keywordsStr" placeholder="用逗号分隔" />
         </div>
+
+        <!-- AI 识别区域 -->
+        <div style="margin:16px 0;padding:12px;background:#f5f5f5;border-radius:6px">
+          <div style="font-size:0.9em;margin-bottom:6px;color:#666">AI 自动识别</div>
+          <textarea v-model="editorAiInput" rows="3" placeholder="粘贴参考文献文本，AI 将自动识别并填充表单..." style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:0.9em"></textarea>
+          <button class="lit-btn primary" @click="fillFormWithAI" :disabled="editorAiLoading" style="margin-top:6px">
+            {{ editorAiLoading ? '识别中...' : 'AI 识别并填充' }}
+          </button>
+        </div>
+
         <div class="form-footer">
           <button class="lit-btn" @click="attachPdf" v-if="editingRef">关联PDF</button>
           <div style="flex:1"></div>
@@ -805,17 +806,17 @@ async function fillFormWithAI() {
     const items = res.items || [];
     if (items.length === 0) return alert('未识别到有效的参考文献');
     const item = items[0];
-    form.title = item.title || '';
-    form.authorsStr = (item.authors || []).join(', ');
-    form.journal = item.journal || '';
-    form.year = item.year || null;
-    form.volume = item.volume || '';
-    form.issue = item.issue || '';
-    form.pages = item.pages || '';
-    form.doi = item.doi || '';
-    form.abstract = item.abstract || '';
-    form.keywordsStr = (item.keywords || []).join(', ');
-    form.ref_type = item.ref_type || 'journal';
+    form.value.title = item.title || '';
+    form.value.authorsStr = (item.authors || []).join(', ');
+    form.value.journal = item.journal || '';
+    form.value.year = item.year || null;
+    form.value.volume = item.volume || '';
+    form.value.issue = item.issue || '';
+    form.value.pages = item.pages || '';
+    form.value.doi = item.doi || '';
+    form.value.abstract = item.abstract || '';
+    form.value.keywordsStr = (item.keywords || []).join(', ');
+    form.value.ref_type = item.ref_type || 'journal';
     editorAiInput.value = '';
     alert('AI 识别成功，已填充表单');
   } catch (e) {
