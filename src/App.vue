@@ -1,6 +1,6 @@
 <template>
   <!-- 首次启动配置向导 -->
-  <SetupWizard />
+  <SetupWizard v-if="!hideLayout" />
 
   <!-- 登录遮罩（仅在需要登录功能时显示） -->
   <LoginOverlay v-if="showLogin" @login-success="onLoginSuccess" />
@@ -66,7 +66,7 @@ const authStore = useAuthStore();
 const showLogin = ref(false);
 
 const isDark = ref(false);
-const currentVersion = '0.0.5';
+const currentVersion = '0.0.6';
 const updateChecking = ref(false);
 const hasUpdate = ref(false);
 const latestVersion = ref('');
