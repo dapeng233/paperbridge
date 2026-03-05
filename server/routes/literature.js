@@ -10,10 +10,14 @@ router.get('/settings/:key', (req, res) => {
 
 router.post('/settings', (req, res) => {
   try {
+    console.log('[/settings] 收到请求:', req.body);
     const { key, value } = req.body;
+    console.log('[/settings] key:', key, 'value:', value);
     lit.setSetting(key, value);
+    console.log('[/settings] 设置成功');
     res.json({ success: true });
   } catch (e) {
+    console.error('[/settings] 错误:', e);
     res.status(500).json({ success: false, error: e.message });
   }
 });

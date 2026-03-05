@@ -300,10 +300,13 @@ import StarterKit from '@tiptap/starter-kit';
 const API = '/api/literature';
 const api = async (path, opts) => {
   const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...opts });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   const text = await res.text();
   if (!text) throw new Error('服务器返回空响应');
-  return JSON.parse(text);
+  const data = JSON.parse(text);
+  if (!res.ok) {
+    throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`);
+  }
+  return data;
 };
 
 // 获取实际的 folder_id（特殊值转为 null）
