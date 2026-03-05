@@ -132,8 +132,15 @@ function generatePdfFilename(ref) {
     author = parts[parts.length - 1];
   }
   const year = ref.year || 'NoYear';
-  const title = (ref.title || 'Untitled').substring(0, 40).replace(/[\\/:*?"<>|]/g, '_');
-  const filename = `${author}_${year}_${title}.pdf`;
+  const title = (ref.title || 'Untitled').substring(0, 40);
+
+  // 安全过滤：移除所有非法字符和路径遍历序列
+  const sanitize = (str) => str
+    .replace(/\.\./g, '')  // 移除 ..
+    .replace(/[\\/:*?"<>|]/g, '_')  // 移除文件系统非法字符
+    .replace(/^\.+/, '');  // 移除开头的点（防止隐藏文件）
+
+  const filename = `${sanitize(author)}_${sanitize(year)}_${sanitize(title)}.pdf`;
   return filename.length > 100 ? filename.substring(0, 96) + '.pdf' : filename;
 }
 

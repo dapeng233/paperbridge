@@ -13,10 +13,10 @@ const storage = require('./services/storage');
 
 const app = express();
 
-// 限流：每个 IP 每分钟最多 60 次请求
+// 限流：每个 IP 每分钟最多 150 次请求
 const limiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 150,
   message: { error: '请求太频繁，请稍后再试' }
 });
 

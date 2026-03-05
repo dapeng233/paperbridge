@@ -715,6 +715,10 @@ async function saveNote() {
   await api('/notes/' + activeNote.value.id, { method: 'PUT', body: JSON.stringify({ content: html }) });
   activeNote.value.content = html;
   delete activeNote.value._dirty;
+  // 更新文献记录的笔记状态标志
+  if (selectedRef.value) {
+    selectedRef.value._hasNote = true;
+  }
 }
 
 // AI 两级摘要
