@@ -45,6 +45,7 @@
     "appId": "com.paperbridge.app",
     "productName": "PaperBridge",
     "asar": false,
+    "icon": "build/icon.ico",
     "directories": {
       "output": "dist-electron"
     },
