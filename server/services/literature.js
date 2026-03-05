@@ -125,10 +125,16 @@ function batchInsertRefs(items, folderId) {
 
 // === PDF 管理 ===
 function generatePdfFilename(ref) {
-  const author = (ref.authors && ref.authors[0]) || 'Unknown';
+  let author = 'Unknown';
+  if (ref.authors && ref.authors.length > 0) {
+    const firstAuthor = ref.authors[0];
+    const parts = firstAuthor.trim().split(/\s+/);
+    author = parts[parts.length - 1];
+  }
   const year = ref.year || 'NoYear';
-  const title = (ref.title || 'Untitled').substring(0, 50).replace(/[\\/:*?"<>|]/g, '_');
-  return `${author}_${year}_${title}.pdf`;
+  const title = (ref.title || 'Untitled').substring(0, 40).replace(/[\\/:*?"<>|]/g, '_');
+  const filename = `${author}_${year}_${title}.pdf`;
+  return filename.length > 100 ? filename.substring(0, 96) + '.pdf' : filename;
 }
 
 function importPdf(refId, sourcePath) {
