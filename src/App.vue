@@ -66,7 +66,7 @@ const authStore = useAuthStore();
 const showLogin = ref(false);
 
 const isDark = ref(false);
-const currentVersion = '0.0.3';
+const currentVersion = '0.0.4';
 const updateChecking = ref(false);
 const hasUpdate = ref(false);
 const latestVersion = ref('');

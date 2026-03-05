@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 浮动笔记窗口 & PDF 打开
   openNoteWindow: (data) => ipcRenderer.invoke('open-note-window', data),
   openPdfExternal: (pdfPath) => ipcRenderer.invoke('open-pdf-external', pdfPath),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
   setAlwaysOnTop: (pinned) => ipcRenderer.invoke('set-always-on-top', pinned),
 
   // 配置相关

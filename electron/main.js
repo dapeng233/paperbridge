@@ -54,6 +54,13 @@ async function createWindow() {
     }
   });
 
+  // 拦截所有 window.open() 调用，在默认浏览器中打开
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    console.log('[setWindowOpenHandler] 拦截到 window.open 调用:', url);
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
   if (isDev) {
     // 开发模式：加载 Vite dev server
     mainWindow.loadURL('http://localhost:5173');
@@ -266,6 +273,19 @@ ipcMain.handle('open-pdf-external', async (_, pdfPath) => {
     await shell.openPath(pdfPath);
     return { success: true };
   } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// 用默认浏览器打开外部链接
+ipcMain.handle('open-external', async (_, url) => {
+  console.log('[open-external] 收到请求打开链接:', url);
+  try {
+    await shell.openExternal(url);
+    console.log('[open-external] 成功打开链接');
+    return { success: true };
+  } catch (e) {
+    console.error('[open-external] 打开链接失败:', e);
     return { success: false, error: e.message };
   }
 });

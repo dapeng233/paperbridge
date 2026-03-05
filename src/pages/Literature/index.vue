@@ -132,8 +132,15 @@
               </div>
             </span>
             <span class="col-doi" @click.stop>
-              <a v-if="r.doi" :href="'https://doi.org/' + r.doi" target="_blank" class="doi-link" :title="r.doi">DOI</a>
-              <span v-else class="cell-placeholder" @click="openEditor(r)">+DOI</span>
+              <div v-if="r.doi" class="pdf-dropdown">
+                <button class="lit-btn-xs doi-btn" @click="openDoiInternal(r)" :title="r.doi">DOI</button>
+                <button class="lit-btn-xs pdf-arrow doi-btn" @click="doiMenuRef = doiMenuRef === r.id ? null : r.id">&#9662;</button>
+                <div v-if="doiMenuRef === r.id" class="pdf-dropdown-menu">
+                  <div class="pdf-dropdown-item" @click="openDoiExternal(r); doiMenuRef = null">默认浏览器打开</div>
+                  <div class="pdf-dropdown-item" @click="copyDoiUrl(r); doiMenuRef = null">复制地址</div>
+                </div>
+              </div>
+              <button v-else class="lit-btn-xs add-btn" @click="openEditor(r)">+DOI</button>
             </span>
             <span class="col-pdf" @click.stop>
               <div v-if="r.pdf_filename" class="pdf-dropdown">
@@ -410,6 +417,7 @@ function colStyle(colName) {
   return { flexBasis: w + 'px', flexGrow: colName === 'title' ? 1 : 0, flexShrink: 1, minWidth: COL_MIN + 'px' };
 }
 const pdfMenuRef = ref(null);
+const doiMenuRef = ref(null);
 const rnoteMenuRef = ref(null);
 const noteMenuRef = ref(null);
 const showMoveMenu = ref(false);
@@ -954,6 +962,33 @@ async function openPdfDefault(r) {
   }
 }
 
+function openDoiInternal(r) {
+  if (!r.doi) return;
+  const url = 'https://doi.org/' + r.doi;
+  window.open(url, '_blank');
+}
+
+function openDoiExternal(r) {
+  if (!r.doi) return;
+  const url = 'https://doi.org/' + r.doi;
+  if (window.electronAPI?.openExternal) {
+    window.electronAPI.openExternal(url);
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
+function copyDoiUrl(r) {
+  if (!r.doi) return;
+  const url = 'https://doi.org/' + r.doi;
+  if (window.electronAPI?.copyToClipboard) {
+    window.electronAPI.copyToClipboard(url);
+    alert('DOI 地址已复制');
+  } else {
+    navigator.clipboard.writeText(url).then(() => alert('DOI 地址已复制'));
+  }
+}
+
 async function openPdfInFolder(r) {
   const res = await api('/refs/' + r.id + '/pdf-path');
   if (res.path && window.electronAPI) window.electronAPI.showInFolder(res.path);
@@ -1354,6 +1389,7 @@ function parseENW(text) {
 .add-btn { opacity: 0.5; }
 .add-btn:hover { opacity: 1; }
 .pdf-btn { background: #10b98120 !important; color: #10b981 !important; border-color: #10b981 !important; }
+.doi-btn { background: #10b98120 !important; color: #10b981 !important; border-color: #10b981 !important; }
 .pdf-arrow { padding: 2px 3px !important; font-size: 0.65em !important; }
 
 .ref-empty { text-align: center; padding: 40px; color: var(--text-muted); font-size: 0.9em; }
