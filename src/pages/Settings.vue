@@ -33,8 +33,12 @@
     <div class="settings-panel">
       <h3>关于</h3>
       <div class="about-info">
-        <p><strong>PaperBridge</strong> v0.0.2</p>
-        <p class="about-desc">科研文献管理与 AI 辅助工具</p>
+        <p><strong>PaperBridge</strong></p>
+        <p class="about-desc">
+          <a href="https://github.com/dapeng233/paperbridge" target="_blank" style="color: var(--accent); text-decoration: none;">
+            GitHub 项目地址
+          </a>
+        </p>
       </div>
     </div>
   </div>
