@@ -932,18 +932,33 @@ async function attachPdfQuick(r) {
 
 // 设置
 async function selectLibraryPath() {
-  if (window.electronAPI) {
-    const dir = await window.electronAPI.selectDirectory();
-    if (dir) {
-      await api('/settings', { method: 'POST', body: JSON.stringify({ key: 'library_path', value: dir }) });
-      libraryPath.value = dir;
+  try {
+    if (window.electronAPI) {
+      const dir = await window.electronAPI.selectDirectory();
+      if (dir) {
+        const res = await api('/settings', { method: 'POST', body: JSON.stringify({ key: 'library_path', value: dir }) });
+        if (res.success) {
+          libraryPath.value = dir;
+          alert('文献库路径设置成功');
+        } else {
+          alert('保存失败: ' + (res.error || '未知错误'));
+        }
+      }
+    } else {
+      const dir = prompt('请输入文献库路径：', libraryPath.value);
+      if (dir) {
+        const res = await api('/settings', { method: 'POST', body: JSON.stringify({ key: 'library_path', value: dir }) });
+        if (res.success) {
+          libraryPath.value = dir;
+          alert('文献库路径设置成功');
+        } else {
+          alert('保存失败: ' + (res.error || '未知错误'));
+        }
+      }
     }
-  } else {
-    const dir = prompt('请输入文献库路径：', libraryPath.value);
-    if (dir) {
-      await api('/settings', { method: 'POST', body: JSON.stringify({ key: 'library_path', value: dir }) });
-      libraryPath.value = dir;
-    }
+  } catch (e) {
+    alert('设置失败: ' + e.message);
+    console.error('设置文献库路径失败:', e);
   }
 }
 

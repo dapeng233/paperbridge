@@ -9,9 +9,13 @@ router.get('/settings/:key', (req, res) => {
 });
 
 router.post('/settings', (req, res) => {
-  const { key, value } = req.body;
-  lit.setSetting(key, value);
-  res.json({ success: true });
+  try {
+    const { key, value } = req.body;
+    lit.setSetting(key, value);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // === 文件夹 ===
