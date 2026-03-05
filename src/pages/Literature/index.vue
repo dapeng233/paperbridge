@@ -95,6 +95,7 @@
             <span class="col-journal" :style="colStyle('journal')">期刊<i class="col-resizer" @mousedown="startResizeCol($event, 'journal')"></i></span>
             <span class="col-rnote" :style="colStyle('rnote')">短标签<i class="col-resizer" @mousedown="startResizeCol($event, 'rnote')"></i></span>
             <span class="col-note" :style="colStyle('note')">文献笔记<i class="col-resizer" @mousedown="startResizeCol($event, 'note')"></i></span>
+            <span class="col-doi">DOI</span>
             <span class="col-pdf">PDF</span>
             <span class="col-actions">编辑</span>
           </div>
@@ -129,6 +130,10 @@
                   <div class="pdf-dropdown-item" @click="doAISummaryFromList(r); noteMenuRef = null">AI 总结文献笔记</div>
                 </div>
               </div>
+            </span>
+            <span class="col-doi" @click.stop>
+              <a v-if="r.doi" :href="'https://doi.org/' + r.doi" target="_blank" class="doi-link" :title="r.doi">DOI</a>
+              <span v-else class="cell-placeholder" @click="openEditor(r)">+DOI</span>
             </span>
             <span class="col-pdf" @click.stop>
               <div v-if="r.pdf_filename" class="pdf-dropdown">
@@ -1323,8 +1328,12 @@ function parseENW(text) {
 .col-journal { width: 120px; flex-shrink: 1; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .col-rnote { width: 110px; flex-shrink: 1; min-width: 30px; overflow: visible; position: relative; }
 .col-note { width: 120px; flex-shrink: 1; min-width: 30px; overflow: visible; position: relative; }
+.col-doi { width: 50px; flex-shrink: 0; text-align: center; }
 .col-pdf { width: 65px; flex-shrink: 0; text-align: center; }
 .col-actions { width: 36px; flex-shrink: 0; text-align: center; }
+
+.doi-link { color: var(--accent); text-decoration: none; font-size: 0.85em; }
+.doi-link:hover { text-decoration: underline; }
 
 .cell-with-dropdown { display: flex; align-items: center; gap: 2px; position: relative; }
 .cell-with-dropdown .rnote-edit-input { flex: 1; min-width: 0; }
