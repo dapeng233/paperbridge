@@ -199,6 +199,16 @@
     <div v-if="showEditor" class="modal-overlay" @click.self="showEditor = false">
       <div class="modal-box">
         <h3>{{ editingRef ? '编辑题录' : '新建题录' }}</h3>
+
+        <!-- AI 识别区域 -->
+        <div style="margin-bottom:16px;padding:12px;background:#f5f5f5;border-radius:6px">
+          <div style="font-size:0.9em;margin-bottom:6px;color:#666">AI 自动识别</div>
+          <textarea v-model="editorAiInput" rows="3" placeholder="粘贴参考文献文本，AI 将自动识别并填充表单..." style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:0.9em"></textarea>
+          <button class="lit-btn primary" @click="fillFormWithAI" :disabled="editorAiLoading" style="margin-top:6px">
+            {{ editorAiLoading ? '识别中...' : 'AI 识别并填充' }}
+          </button>
+        </div>
+
         <div class="form-grid">
           <label>标题</label><input v-model="form.title" />
           <label>作者</label><input v-model="form.authorsStr" placeholder="用逗号分隔" />
@@ -591,6 +601,9 @@ const aiApiKey = ref('');
 const aiBaseUrl = ref('');
 const aiModel = ref('');
 
+const editorAiInput = ref('');
+const editorAiLoading = ref(false);
+
 const aiSummaryLoading = ref(false);
 const aiSummaryResult = ref(null);
 
@@ -780,6 +793,36 @@ async function importAIResult(item) {
   await api('/refs', { method: 'POST', body: JSON.stringify({ ...item, folder_id: getActualFolderId() }) });
   loadRefs();
   alert('已导入: ' + item.title);
+}
+
+async function fillFormWithAI() {
+  if (!editorAiInput.value.trim()) return alert('请输入参考文献文本');
+  if (!aiApiKey.value) return alert('请先在设置中配置 AI API Key');
+  editorAiLoading.value = true;
+  try {
+    const res = await api('/ai-match', { method: 'POST', body: JSON.stringify({ text: editorAiInput.value, api_key: aiApiKey.value, base_url: aiBaseUrl.value, model: aiModel.value }) });
+    if (res.error) return alert('AI 识别失败: ' + res.error);
+    const items = res.items || [];
+    if (items.length === 0) return alert('未识别到有效的参考文献');
+    const item = items[0];
+    form.title = item.title || '';
+    form.authorsStr = (item.authors || []).join(', ');
+    form.journal = item.journal || '';
+    form.year = item.year || null;
+    form.volume = item.volume || '';
+    form.issue = item.issue || '';
+    form.pages = item.pages || '';
+    form.doi = item.doi || '';
+    form.abstract = item.abstract || '';
+    form.keywordsStr = (item.keywords || []).join(', ');
+    form.ref_type = item.ref_type || 'journal';
+    editorAiInput.value = '';
+    alert('AI 识别成功，已填充表单');
+  } catch (e) {
+    alert('AI 识别失败: ' + e.message);
+  } finally {
+    editorAiLoading.value = false;
+  }
 }
 
 // 搜索
