@@ -298,7 +298,13 @@ import { useEditor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 
 const API = '/api/literature';
-const api = (path, opts) => fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...opts }).then(r => r.json());
+const api = async (path, opts) => {
+  const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  const text = await res.text();
+  if (!text) throw new Error('服务器返回空响应');
+  return JSON.parse(text);
+};
 
 // 获取实际的 folder_id（特殊值转为 null）
 function getActualFolderId() {
