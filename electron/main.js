@@ -1,17 +1,36 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 
 const isDev = !app.isPackaged;
 let serverProcess = null;
 let mainWindow = null;
 const iconPath = path.join(__dirname, '../build/icon.ico');
 
+// 启动前清理占用端口的残留进程
+function killProcessOnPort(port) {
+  try {
+    const result = execSync(`netstat -ano | findstr ":${port}" | findstr "LISTENING"`, { encoding: 'utf-8' });
+    const lines = result.trim().split('\n');
+    for (const line of lines) {
+      const pid = line.trim().split(/\s+/).pop();
+      if (pid && pid !== '0') {
+        try { execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' }); } catch (_) {}
+      }
+    }
+  } catch (_) {
+    // 没有进程占用端口，正常情况
+  }
+}
+
 // 生产模式下用子进程启动后端（避免原生模块兼容问题）
 if (!isDev) {
   const appPath = path.dirname(app.getPath('exe'));
   const serverPath = path.join(__dirname, '../server/index.js');
+  // 启动前清理可能残留的旧后端进程
+  const config = require('../server/config');
+  killProcessOnPort(config.port);
   // 使用 Electron 内置的 Node.js 运行后端，避免原生模块版本不匹配
   serverProcess = spawn(process.execPath, [serverPath], {
     stdio: 'inherit',
@@ -72,7 +91,8 @@ async function createWindow() {
     if (ready) {
       mainWindow.loadURL(serverUrl);
     } else {
-      mainWindow.loadURL(`data:text/html,<h1>服务器启动失败，请重启应用</h1>`);
+      const errorHtml = `<!doctype html><html><head><meta charset="utf-8" /><title>启动失败</title><style>body{font-family:system-ui,Segoe UI,Arial,sans-serif;padding:24px;line-height:1.6}h1{font-size:22px;margin:0 0 12px}p{margin:8px 0;color:#444}</style></head><body><h1>服务器启动失败</h1><p>请先关闭所有 PaperBridge 进程后重试。</p><p>如果仍失败，请重启电脑后再打开应用。</p></body></html>`;
+      mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(errorHtml)}`);
     }
   }
 

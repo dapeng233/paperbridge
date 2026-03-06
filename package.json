@@ -1,6 +1,6 @@
 {
   "name": "paperbridge",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "PaperBridge - 科研文献管理与 AI 辅助桌面应用",
   "main": "electron/main.js",
   "scripts": {
